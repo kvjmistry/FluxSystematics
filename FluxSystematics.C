@@ -43,13 +43,14 @@ void FluxSystematics(){
 		"Beam_spot_1_1mm",   "Beam_spot_1_5mm",
 		"Horn2_x_p3mm",      "Horm2_x_m3mm",
 		"Horn2_y_p3mm",      "Horn2_y_m3mm",
-		"Horns_0mm_water",   "Horns_2mm_water",
-		"Beam_shift_x_p1mm", "Beam_shift_x_m1mm",
-		"Beam_shift_y_p1mm", "Beam_shift_y_m1mm",
-		"Target_z_p7mm",     "Target_z_m7mm",
-		"Horn1_refined_descr",
-		"Decay_pipe_Bfield",
-		"Old_Horn"};
+		"Horns_0mm_water",   "Horns_2mm_water"
+		// "Beam_shift_x_p1mm", "Beam_shift_x_m1mm",
+		// "Beam_shift_y_p1mm", "Beam_shift_y_m1mm",
+		// "Target_z_p7mm",     "Target_z_m7mm",
+		// "Horn1_refined_descr",
+		// "Decay_pipe_Bfield",
+		// "Old_Horn"
+		};
 
 	// Declare member data here.
 	int run, subrun, evt;
@@ -65,8 +66,8 @@ void FluxSystematics(){
 
 	// Vectors for cross section calculation. 
 	std::vector<double> N_gen, N_sig, N_bkg, N_sel, N_dirt ,Data_x_sec, Efficiency, Flux;	// Vectors of num of events with new weights for generated, signal, background, selected
-	double N_gen_CV{0}, N_sig_CV{0}, N_bkg_CV{0}, N_sel_CV{0}, N_dirt_CV{0};					// Input counters for num sel, gen, sig, bkg from the input lists + dirt as POT scaling diff
-	std::vector<std::vector<double>> vec_Data_x_sec , vec_Efficiency, vec_gen, vec_sig, vec_dirt, vec_bkg , vec_flux;      				// vectors to store the differnt versions of the cross section
+	double N_gen_CV{0}, N_sig_CV{0}, N_bkg_CV{0}, N_sel_CV{0}, N_dirt_CV{0};				// Input counters for num sel, gen, sig, bkg from the input lists + dirt as POT scaling diff
+	std::vector<std::vector<double>> vec_Data_x_sec , vec_Efficiency, vec_gen, vec_sig, vec_dirt, vec_bkg , vec_flux;	// vectors to store the differnt versions of the cross section
 
 	// Flux
 	const double flux_mc{4.19844e+10};  // POT Scaled divide these to get scale factor
@@ -119,10 +120,10 @@ void FluxSystematics(){
 	HistWeights numu("numu");
 	HistWeights numubar("numubar");
 
-	PrecalcHistRatio( nue,         "nue");
-	PrecalcHistRatio( nuebar,   "nuebar");
-	PrecalcHistRatio( numu,       "numu");
-	PrecalcHistRatio( numubar, "numubar");
+	PrecalcHistRatio( nue,         "nue", params);
+	PrecalcHistRatio( nuebar,   "nuebar", params);
+	PrecalcHistRatio( numu,       "numu", params);
+	PrecalcHistRatio( numubar, "numubar", params);
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	// Read in the events
@@ -213,7 +214,7 @@ void FluxSystematics(){
 	// bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/with_tilt_2Dhists/output.root"); if (boolfile == false) gSystem->Exit(0); // with tilt
 	// bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/bugfix_release_notilt/output.root"); if (boolfile == false) gSystem->Exit(0); // notilt
 	// bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/DetectorWeights_withtilt/2D/more_stats_pi_to_nue/output.root"); if (boolfile == false) gSystem->Exit(0); // with tilt and modified window calc
-	bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_2D_run0.root"); if (boolfile == false) gSystem->Exit(0); // Most up to date version of CV
+	bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run0.root"); if (boolfile == false) gSystem->Exit(0); // Most up to date version of CV
 
 	std::cout << "Params size:\t" << params.size() << std::endl;
 	// Loop over the parameters
