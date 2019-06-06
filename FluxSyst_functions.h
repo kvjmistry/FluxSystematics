@@ -1,5 +1,5 @@
 // Script with finctions needed for fluxsystematics script to run
-#include "/uboone/app/users/kmistry/PPFX/numi-validation/scripts/plot_comp_functions.h"
+#include "plot_comp_functions.h"
 // ------------------------------------------------------------------------------------------------------------
 class event {
 	public:
