@@ -60,37 +60,6 @@ double GetWeight(int universe, int index, event event, HistWeights &nue,  HistWe
 	// Get the neutrino flavour to reweigh the event type
 	std::string mode = GetMode(event.nu_flav); 
 
-	// // if index is 0 then we are getting a weight from a HP universe
-	// if (param.find("PPFX") != std::string::npos){
-	// 	if (mode == "nue") hRatio = (TH2D*) 			nue.HP.at(index).at(universe)->Clone("hRatio");
-	// 	else if (mode == "nuebar") hRatio = (TH2D*) 	nuebar.HP.at(index).at(universe)->Clone("hRatio");
-	// 	else if (mode == "numu") hRatio = (TH2D*) 		numu.HP.at(index).at(universe)->Clone("hRatio");
-	// 	else if (mode == "numubar") hRatio = (TH2D*) 	numubar.HP.at(index).at(universe)->Clone("hRatio");
-	// 	else std::cout << "Unknown mode!"<< std::endl;
-	
-	// }
-	// else {
-		
-	// 	// CV 
-	// 	if (param == "CV") return weight = 1;
-		
-	// 	// else we have a beamline variations
-	// 	else {
-	// 		if (mode == "nue") hRatio = (TH2D*) 			nue.Beamline.at(index-1)->Clone("hRatio");
-	// 		else if (mode == "nuebar") hRatio = (TH2D*) 	nuebar.Beamline.at(index-1)->Clone("hRatio");
-	// 		else if (mode == "numu") hRatio = (TH2D*) 		numu.Beamline.at(index-1)->Clone("hRatio");
-	// 		else if (mode == "numubar") hRatio = (TH2D*) 	numubar.Beamline.at(index-1)->Clone("hRatio");
-	// 		else std::cout << "Unknown mode!"<< std::endl;
-	// 	}
-		
-	// }
-
-	// // Now pick the value at Enu and Theta
-	// xbin = hRatio->GetXaxis()->FindBin(event.E);
-	// ybin = hRatio->GetYaxis()->FindBin(event.Theta);
-	// weight = hRatio->GetBinContent(xbin, ybin);
-
-
 	// if index is 0 then we are getting a weight from a HP universe
 	if (param.find("PPFX") != std::string::npos){
 		if (mode == "nue"){
@@ -243,22 +212,23 @@ double CalcDataXSec(double sel, double bkg , double flux,
 					double targets, double intime_cosmics_bkg, double intime_cosmic_scale_factor,
 					double dirt, double dirt_scale_factor, double mc_scale_factor, double efficiency ){
 
-	// std::cout << 
-	// "DEBUG:\n"<<
-	// "sel:\t" << sel << "\n" << 
-	// "bkg:\t" << bkg  << "\n" << 
-	// "flux:\t" << flux << "\n" << 
-	// "targets:\t" << targets << "\n" << 
-	// "intime_cosmics_bkg:\t" << intime_cosmics_bkg << "\n" << 
-	// "intime cosmic scale factor:\t" << intime_cosmic_scale_factor << "\n" << 
-	// "dirt:\t" << dirt << "\n" << 
-	// "dirt scale factor:\t" << dirt_scale_factor << "\n" << 
-	// "mc scale factor:\t" << mc_scale_factor << "\n" << 
-	// "efficiency:\t" << efficiency << std::endl;
+	bool DEBUG{false};
 
-	// std::cout << "Total Scaled background:\t" <<  (intime_cosmics_bkg * intime_cosmic_scale_factor) - (dirt * dirt_scale_factor) - (bkg * mc_scale_factor) << std::endl;	
+	if (DEBUG) std::cout << 
+	"DEBUG:\n"<<
+	"sel:\t" << sel << "\n" << 
+	"bkg:\t" << bkg  << "\n" << 
+	"flux:\t" << flux << "\n" << 
+	"targets:\t" << targets << "\n" << 
+	"intime_cosmics_bkg:\t" << intime_cosmics_bkg << "\n" << 
+	"intime cosmic scale factor:\t" << intime_cosmic_scale_factor << "\n" << 
+	"dirt:\t" << dirt << "\n" << 
+	"dirt scale factor:\t" << dirt_scale_factor << "\n" << 
+	"mc scale factor:\t" << mc_scale_factor << "\n" << 
+	"efficiency:\t" << efficiency << std::endl;
 
-	// return (sel - 129.974) / (efficiency * targets * flux); 
+	if (DEBUG) std::cout << "Total Scaled background:\t" <<  (intime_cosmics_bkg * intime_cosmic_scale_factor) - (dirt * dirt_scale_factor) - (bkg * mc_scale_factor) << std::endl;	
+
 	return (sel - (intime_cosmics_bkg * intime_cosmic_scale_factor) - (dirt * dirt_scale_factor) - (bkg * mc_scale_factor)) / (efficiency * targets * flux); 
 }
 // ------------------------------------------------------------------------------------------------------------
@@ -414,5 +384,141 @@ double STD_Calculator(std::vector<double> vec, double CV){
     }
 
     return (std::sqrt( Err / vec.size() ) );
+
+}
+// ------------------------------------------------------------------------------------------------------------
+// Make a plot of the beamline variation uncertainties
+void Make_Beamline_Plot(){
+
+	std::vector<std::string> param_max = {
+		"Horn 2kA",
+		"Horn 1 x 3mm",
+		"Horn 1 y 3mm",
+		"Beam Spot 2mm",
+		"Horn 2 x 3mm",
+		"Horn 2 y 3mm",
+		"Horns water",
+		"Beam Shift x 1mm",
+		"Beam Shift y 1mm",
+		"Target z 7mm",
+		"Horn1 Refined Descr.",
+		"Decay Pipe B Field",
+		"Old Horn",
+		" ",
+		"Total Error"
+	};
+
+	std::vector<double> param_max_val = {
+		0.3,
+		1.1,
+		0.98,
+		2.8,
+		0.4,
+		0.53,
+		0.86,
+		3.2,
+		3.2,
+		17.2,
+		0.65,
+		1.4,
+		2.3,
+		0
+	};
+
+	double tot_beamline_err{0};
+
+	for (unsigned int i = 0; i < param_max_val.size(); i++){
+
+		tot_beamline_err+=param_max_val[i]*param_max_val[i];
+	
+	}
+	tot_beamline_err = std::sqrt(tot_beamline_err);
+	param_max_val.push_back(tot_beamline_err);
+
+	TH1D *hBeamline = new TH1D("Beamline","", param_max_val.size()+1, 0, param_max_val.size()+1);
+
+	for (unsigned int i = 0; i < param_max_val.size(); i++){
+		hBeamline->Fill(param_max[i].c_str(), param_max_val[i]);
+
+	}
+	gStyle->SetOptStat(0); // say no to stats box
+	TCanvas* c = new TCanvas();
+	hBeamline->SetLineColor(kViolet-6);
+	hBeamline->SetLineWidth(3);
+	hBeamline->GetYaxis()->SetTitle("Percentage Uncertainty %");
+	hBeamline->LabelsOption("v");
+	gPad->SetBottomMargin(0.33);
+
+	hBeamline->GetXaxis()->SetLabelSize(0.05);
+	hBeamline->GetXaxis()->SetTitleSize(0.05);
+	hBeamline->GetYaxis()->SetLabelSize(0.05);
+	hBeamline->GetYaxis()->SetTitleSize(0.05);
+	hBeamline->SetMarkerSize(1.8);
+	gPad->SetLeftMargin(0.15);
+
+	hBeamline->Draw("hist, text00");
+
+	c->Print("plots/Beamline_Uncertainties.pdf");
+
+	return;
+}
+// ------------------------------------------------------------------------------------------------------------
+// Make a plot of the hadron production variation uncertainties
+void Make_HP_Plot(std::vector<double> HP_uncertainties){
+
+	std::vector<std::string> HP_names = {
+		"Other",
+		"Targ. Atten",
+		"Thin Kaon",
+		"Thin Meson",
+		"Thin Neutron",
+		"Thin Nuc. A",
+		"Thin Nuc",
+		"Thin Pion",
+		"Tot. Absorp"
+	};
+
+	double HP_Quad{0};
+	// Get the Quadrature Sum, start from 1 to skip master
+	for (unsigned int i = 1; i < HP_uncertainties.size(); i++){
+
+		HP_Quad+=  HP_uncertainties.at(i) * HP_uncertainties.at(i);
+	}
+
+	HP_Quad = std::sqrt(HP_Quad);
+
+	TH1D *hHP = new TH1D("HP","", 14, 0, 14);
+
+	for (unsigned int i = 1; i < HP_uncertainties.size(); i++){
+		hHP->Fill( HP_names.at(i-1).c_str(), HP_uncertainties.at(i) );
+
+	}
+	hHP->Fill( " ", 0 );
+	hHP->Fill( "Master", HP_uncertainties.at(0) );
+	hHP->Fill( "  ", 0 );
+	hHP->Fill( "Quadrature Sum", HP_Quad );
+	hHP->Fill( "  ", 0 );
+	
+	gStyle->SetPaintTextFormat("4.2f");
+	gStyle->SetOptStat(0); // say no to stats box
+	TCanvas* c_HP = new TCanvas();
+	hHP->SetLineColor(kViolet-6);
+	hHP->SetLineWidth(3);
+	hHP->GetYaxis()->SetTitle("Percentage Uncertainty %");
+	hHP->LabelsOption("v");
+	gPad->SetBottomMargin(0.25);
+
+	hHP->GetXaxis()->SetLabelSize(0.05);
+	hHP->GetXaxis()->SetTitleSize(0.05);
+	hHP->GetYaxis()->SetLabelSize(0.05);
+	hHP->GetYaxis()->SetTitleSize(0.05);
+	hHP->SetMarkerSize(1.8);
+	gPad->SetLeftMargin(0.15);
+
+	hHP->Draw("hist, text00");
+
+	c_HP->Print("plots/HP_Uncertainties.pdf");
+
+
 
 }

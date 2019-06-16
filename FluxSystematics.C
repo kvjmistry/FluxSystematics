@@ -15,26 +15,8 @@ and then add them all together at the end.
 // ------------------------------------------------------------------------------------------------------------
 void FluxSystematics(){
 	
-	// Declearation of variables
-	// std::vector<std::string> params = { // A vector with the variations OLD ONES
-	// 	"CV",                
-	// 	"HP",
-	// 	"Horn_p2kA",         "Horn_m2kA",
-	// 	"Horn1_x_p3mm",      "Horm1_x_m3mm",
-	// 	"Horn1_y_p3mm",      "Horn1_y_m3mm",
-	// 	"Beam_spot_1_1mm",   "Nominal",          "Beam_spot_1_5mm",
-	// 	"Horn2_x_p3mm",      "Horm2_x_m3mm",
-	// 	"Horn2_y_p3mm",      "Horn2_y_m3mm",
-	// 	"Horns_0mm_water",   "Horns_2mm_water",
-	// 	"Old_Horn",
-	// 	"Beam_shift_x_p1mm", "Beam_shift_x_m1mm",
-	// 	"Beam_shift_y_p1mm", "Beam_shift_y_m1mm",
-	// 	"Target_z_p7mm",     "Target_z_m7mm",
-	// 	"Decay_pipe_Bfield",
-	// 	"Horn1_refined_descr",
-	// 	"Beam_divergence_54urad" };
-
-	std::vector<std::string> params = { // A vector with the variations NEW ONES with no threshold
+	// A vector with the variations with no threshold
+	std::vector<std::string> params = { 
 		"CV",                
 		"PPFXMaster",
 		"PPFXOther",
@@ -66,6 +48,7 @@ void FluxSystematics(){
 	int run, subrun, evt;
 	int Universes;        		// The number of universes simulated
 	int HP_index{0}, Beamline_index{1}, temp_index{0};
+	std::vector<double> HP_uncertainties;
 
 	double total_in{0}; 		// Total number of matched events 
 	double tot_gen{0};  		// counter for the total number of gen events read in
@@ -132,17 +115,16 @@ void FluxSystematics(){
 
 	int resize_num{0};
 
-	// Get the number of HP parameters runninv over
+	// Get the number of HP parameters runninv over and resize the vector
 	for (unsigned int i = 0; i < params.size(); i++){
 		if (params.at(i).find("PPFX") != std::string::npos ) resize_num++;
 	}
-
 	nue.HP.resize(resize_num);
 	nuebar.HP.resize(resize_num);
 	numu.HP.resize(resize_num);
 	numubar.HP.resize(resize_num);
-	
 
+	// Create the Histogram ratios
 	PrecalcHistRatio( nue,         "nue", params);
 	PrecalcHistRatio( nuebar,   "nuebar", params);
 	PrecalcHistRatio( numu,       "numu", params);
@@ -156,7 +138,6 @@ void FluxSystematics(){
 	// Load in the file containing the event number for Signal_Generated, N_gen or Signal_Selected N_sig
 	if (DEBUG) std::cout << "\nNow reading in event files!" << std::endl;
 
-	
 	// Read in the selected list
 	ReadEventList("filelists/selected_events_for_truth_script_spaced.txt", evtnum, class_type, mc_nu_id, mc_nu_dir_x, mc_nu_dir_y, mc_nu_dir_z, mc_nu_energy    );
 	
@@ -233,7 +214,6 @@ void FluxSystematics(){
 	if (DEBUG) std::cout << "Total selected in:   \t"<< N_sel_CV << std::endl;
 	if (DEBUG) std::cout << "Total background in: \t"<< N_bkg_CV << std::endl;
 	if (DEBUG) std::cout << "Total dirt in: \t\t"<< N_dirt_CV << std::endl;
-		
 	
 	// Get the file with the CV and Hadron Production uncertainties
 	bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run0.root"); if (boolfile == false) gSystem->Exit(0); // Most up to date version of CV
@@ -290,54 +270,32 @@ void FluxSystematics(){
 		for (unsigned int k{0}; k < N_gen.size(); k++){
 			if (i == 1) std::cout << "\033[1;32mUniverse:\t" << k << "\n\033[0m"<< std::endl;
 
+			// Flux 
 			double flux{0};
-
-			// If we have a beamline variation, we want to modify apply a weight to the HP CV flux by Beamline Flux / Nominal
-			// if (param != "CV" && param != "HP" ){
-			// 	std::cout <<param <<std::endl;
-			// 	flux =  IntegrateFlux(0, fCV, 0, POTScale) * (IntegrateFlux(k, fCV, i, POTScale) / IntegrateFlux(k, fCV, 9, POTScale)); // Index for nominal is 9 index for cv is 0
-			// }
-			// else flux = IntegrateFlux(k, fCV, i, POTScale); 
-
 			flux = IntegrateFlux(k, fCV, temp_index, POTScale, params.at(i));
-
 			Flux[k] = flux; // save the flux
 			std::cout << "\nflux: " << flux << std::endl;
 
-
 			// Recalculations due to not weighting non MC genie stuff and other bugs
 			N_gen[k] = N_gen[k];  
-			// N_sel[k] = N_sel_CV; // ANDY F: do not reweight the selected events in MC so it is like data
 			N_sel[k] = num_selected_data; // Use this for data x-section calcuation
 			N_sig[k] = N_sig[k];
 			N_bkg[k] = N_bkg[k];
-
 			Efficiency[k] = N_sig[k] / N_gen[k];  // 0.0884133 CV efficiency
+			
+			// Display the changes from the CV
 			if (DEBUG) std::cout << "\nEfficiency\t" << Efficiency[k] << std::endl;
-
-			// if (i == 1) {
-			// 	std::cout << "\nN_gen:\t" << N_gen[k] << std::endl;
-			// 	std::cout << "N_sel:\t" << N_sel[k] << std::endl;
-			// 	std::cout << "N_sig:\t" << N_sig[k] << std::endl;
-			// 	std::cout << "N_bkg:\t" << N_bkg[k] << std::endl;
-			// 	std::cout << "N_dirt:\t" << N_dirt[k] << "\n"<< std::endl;
-			// }
-			// else {
-				std::cout << "\nN_gen:\t" << N_gen[k] << "   \% change from nominal:\t" << 100*(N_gen[k] - 7103)/7104 << std::endl;
-				std::cout << "N_sel:\t" << N_sel[k] << "       \% change from nominal:\t" << 100*(N_sel[k] - 214)/214 << std::endl;
-				std::cout << "N_sig:\t" << N_sig[k] << "   \% change from nominal:\t" << 100*(N_sig[k] - 642)/642 << std::endl;
-				std::cout << "N_bkg:\t" << N_bkg[k] << "   \% change from nominal:\t" << 100*(N_bkg[k] - 356)/356 << std::endl;
-				std::cout << "N_dirt:\t" << N_dirt[k] << "   \% change from nominal:\t" << 100*(N_dirt[k] - 30)/30 << "\n"<< std::endl;
-
-			// }
+			if (DEBUG) std::cout << "\nN_gen:\t" << N_gen[k] << "   \% change from nominal:\t" << 100*(N_gen[k] - 7103)/7104 << std::endl;
+			if (DEBUG) std::cout << "N_sel:\t" << N_sel[k] << "       \% change from nominal:\t" << 100*(N_sel[k] - 214)/214 << std::endl;
+			if (DEBUG) std::cout << "N_sig:\t" << N_sig[k] << "   \% change from nominal:\t" << 100*(N_sig[k] - 642)/642 << std::endl;
+			if (DEBUG) std::cout << "N_bkg:\t" << N_bkg[k] << "   \% change from nominal:\t" << 100*(N_bkg[k] - 356)/356 << std::endl;
+			if (DEBUG) std::cout << "N_dirt:\t" << N_dirt[k] << "   \% change from nominal:\t" << 100*(N_dirt[k] - 30)/30 << "\n"<< std::endl;
 
 			// Make flux calculation -- choice of gsimple or dk2nu flux controlled by bool at top of code
 			if (UseGSimpleFlux ) Data_x_sec[k] = CalcDataXSec(num_selected_data, N_bkg[k], flux_gsimple_data, targets_data, intime_cosmics_bkg, intime_cosmic_scale_factor, N_dirt[k], dirt_scale_factor, mc_scale_factor, Efficiency[k] );
 			else Data_x_sec[k] = CalcDataXSec(num_selected_data, N_bkg[k], flux, targets_data, intime_cosmics_bkg, intime_cosmic_scale_factor, N_dirt[k], dirt_scale_factor, mc_scale_factor, Efficiency[k] );
 			if (DEBUG) std::cout << "\033[1;33mNew DATA X-section [10^-39 cm^2]\t\t" << Data_x_sec[k]/1.0e-39 << "\033[0m"<<std::endl;
 			if (DEBUG) std::cout << "\n++++++++++++++++++++++++++\n" << std::endl;
-			
-		
 		}
 
 		// Add the x section and efficiencies to a vector
@@ -383,6 +341,8 @@ void FluxSystematics(){
 		std::cout << "Dirt_STD:\t" <<  Dirt_STD << "\t\tDirt Err:\t"  << (100 * Dirt_STD) / vec_dirt[0][0]       << " \%"<<std::endl;
 		std::cout << "Bkg_STD:\t"  <<  Bkg_STD  << "\t\tBkg Err:\t"   << (100 * Bkg_STD) /  vec_bkg[0][0]        << " \%"<<std::endl;
 		std::cout << "Flux_STD:\t" <<  Flux_STD << "\tFlux Err:\t"    << (100 * Flux_STD) / vec_flux[0][0]       << " \%"<<std::endl;
+	
+		HP_uncertainties.push_back( (100 * XSEC_STD) / vec_Data_x_sec[0][0] );
 	}
 	
 	// Now lets get the percent difference between the nominal beamline and the beamline variations
@@ -396,77 +356,10 @@ void FluxSystematics(){
 			<< "\n"<< std::endl;
 	}
 
-	// // Make a plot of the beamline variation uncertainties
-	std::vector<std::string> param_max = {
-		"Horn 2kA",
-		"Horn 1 x 3mm",
-		"Horn 1 y 3mm",
-		"Beam Spot 2mm",
-		"Horn 2 x 3mm",
-		"Horn 2 y 3mm",
-		"Horns water",
-		"Beam Shift x 1mm",
-		"Beam Shift y 1mm",
-		"Target z 7mm",
-		"Horn1 Refined Descr.",
-		"Decay Pipe B Field",
-		"Old Horn",
-		" ",
-		"Total Error"
-	};
-
-	std::vector<double> param_max_val = {
-		0.3,
-		1.1,
-		0.98,
-		2.8,
-		0.4,
-		0.53,
-		0.86,
-		3.2,
-		3.2,
-		17.2,
-		0.65,
-		1.4,
-		2.3,
-		0
-	};
-
-	double tot_beamline_err{0};
-
-	for (unsigned int i = 0; i < param_max_val.size(); i++){
-
-		tot_beamline_err+=param_max_val[i]*param_max_val[i];
-	
-	}
-	tot_beamline_err = std::sqrt(tot_beamline_err);
-	param_max_val.push_back(tot_beamline_err);
-
-	TH1D *hBeamline = new TH1D("Beamline","", param_max_val.size()+1, 0, param_max_val.size()+1);
-
-	for (unsigned int i = 0; i < param_max_val.size(); i++){
-		hBeamline->Fill(param_max[i].c_str(), param_max_val[i]);
-
-	}
-	gStyle->SetOptStat(0); // say no to stats box
-	TCanvas* c = new TCanvas();
-	hBeamline->SetLineColor(kViolet-6);
-	hBeamline->SetLineWidth(3);
-	hBeamline->GetYaxis()->SetTitle("Percentage Uncertainty %");
-	hBeamline->LabelsOption("v");
-	gPad->SetBottomMargin(0.33);
-
-	hBeamline->GetXaxis()->SetLabelSize(0.05);
-	hBeamline->GetXaxis()->SetTitleSize(0.05);
-	hBeamline->GetYaxis()->SetLabelSize(0.05);
-	hBeamline->GetYaxis()->SetTitleSize(0.05);
-	hBeamline->SetMarkerSize(1.8);
-	gPad->SetLeftMargin(0.15);
-
-	hBeamline->Draw("hist, text00");
-
+	// Make the Beamline Plot
 	gSystem->Exec("if [ ! -d \"plots\" ]; then echo \"\nPlots folder does not exist... creating\"; mkdir plots; fi"); 
-	c->Print("plots/Beamline_Uncertainties.pdf");
+	Make_Beamline_Plot();
+	Make_HP_Plot(HP_uncertainties);
 
 	// gSystem->Exit(0);
 } // END
