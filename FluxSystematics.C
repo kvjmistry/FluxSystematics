@@ -36,7 +36,16 @@ void FluxSystematics(){
 
 	std::vector<std::string> params = { // A vector with the variations NEW ONES with no threshold
 		"CV",                
-		"HP",
+		"PPFXMaster",
+		"PPFXOther",
+		"PPFXTargAtten",
+		"PPFXThinKaon",
+		"PPFXThinMeson",
+		"PPFXThinNeutron",
+		"PPFXThinNucA",
+		"PPFXThinNuc",
+		"PPFXThinPion",
+		"PPFXTotAbsorp",
 		"Horn_p2kA",         "Horn_m2kA",
 		"Horn1_x_p3mm",      "Horm1_x_m3mm",
 		"Horn1_y_p3mm",      "Horn1_y_m3mm",
@@ -52,9 +61,11 @@ void FluxSystematics(){
 		"Old_Horn"
 		};
 
+
 	// Declare member data here.
 	int run, subrun, evt;
 	int Universes;        		// The number of universes simulated
+	int HP_index{0}, Beamline_index{1}, temp_index{0};
 
 	double total_in{0}; 		// Total number of matched events 
 	double tot_gen{0};  		// counter for the total number of gen events read in
@@ -100,7 +111,6 @@ void FluxSystematics(){
 	// DEBUG
 	bool DEBUG{true};
 	bool UseGSimpleFlux{false};
-	bool UseHP{false};
 	if (UseGSimpleFlux) std::cout << "\033[1;37mUsing GSimple Flux in the CV calcualtion not dk2nu\033[0m"<< std::endl; 
 
 	// Histograms
@@ -120,10 +130,25 @@ void FluxSystematics(){
 	HistWeights numu("numu");
 	HistWeights numubar("numubar");
 
+	int resize_num{0};
+
+	// Get the number of HP parameters runninv over
+	for (unsigned int i = 0; i < params.size(); i++){
+		if (params.at(i).find("PPFX") != std::string::npos ) resize_num++;
+	}
+
+	nue.HP.resize(resize_num);
+	nuebar.HP.resize(resize_num);
+	numu.HP.resize(resize_num);
+	numubar.HP.resize(resize_num);
+	
+
 	PrecalcHistRatio( nue,         "nue", params);
 	PrecalcHistRatio( nuebar,   "nuebar", params);
 	PrecalcHistRatio( numu,       "numu", params);
 	PrecalcHistRatio( numubar, "numubar", params);
+
+	std::cout << "Beamline size:\t" << nue.Beamline.size() << std::endl;
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	// Read in the events
@@ -211,47 +236,49 @@ void FluxSystematics(){
 		
 	
 	// Get the file with the CV and Hadron Production uncertainties
-	// bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/with_tilt_2Dhists/output.root"); if (boolfile == false) gSystem->Exit(0); // with tilt
-	// bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/bugfix_release_notilt/output.root"); if (boolfile == false) gSystem->Exit(0); // notilt
-	// bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/DetectorWeights_withtilt/2D/more_stats_pi_to_nue/output.root"); if (boolfile == false) gSystem->Exit(0); // with tilt and modified window calc
 	bool boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run0.root"); if (boolfile == false) gSystem->Exit(0); // Most up to date version of CV
 
 	std::cout << "Params size:\t" << params.size() << std::endl;
 	// Loop over the parameters
 	for (unsigned int i = 0; i < params.size(); i++){
-		// if (i >= 1) continue; // skip the beamline uncertainties for now...
-		if (i == 1) UseHP = true;
 
+		// Switch the index
+		if (params.at(i).find("PPFX") != std::string::npos ) temp_index = HP_index;
+		else {
+			if (params.at(i) != "CV") temp_index = Beamline_index; // Increment the Beamline variation counter
+		}
+
+		// Display indexes running over (Mainly for debugging)
+		std::cout << "HP_index:\t" << HP_index << std::endl;
+		std::cout << "Beamline_index:\t" << Beamline_index << std::endl;
+		std::cout << "temp_index:\t" << temp_index << std::endl;
 		std::cout << "index:\t" << i << std::endl;
 
 		std::string param = params.at(i); // Get the parameter
 		if (DEBUG) std::cout << "\n++++++++++++++++++++++++++" << std::endl;
 		std::cout << "\033[1;32mRunning over Parameter:\033[0m\t\033[1;32m" << param << "\033[0m"<< std::endl;
 		
-		
 		// Set the number of universes
-		if (i == 1 ) Universes = 100; // change this to 100 for all the universes!
+		if (params.at(i).find("PPFX") != std::string::npos ) Universes = 100; // Set universes to 100 for HP variations
 		else Universes = 1;
 
 		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		// Event loop
 		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 		for (unsigned int j = 0; j < event.size(); j++){ 
 			// Alert the user
-			if (j % 1000 == 0 && i == 1) std::cout << "On entry " << j/1000 << "k"<< std::endl;
+			if (j % 1000 == 0 && Universes > 2 ) std::cout << "On entry " << j/1000 << "k"<< std::endl;
 			// std::cout << event[j].type<< std::endl;
 			
 			// Call the Add weights function to reweight the event
-			if      (event[j].type == "gen")  AddWeights(N_gen,  Universes, i, event[j], nue, nuebar, numu, numubar);  // Gen
-			else if (event[j].type == "sig")  AddWeights(N_sig,  Universes, i, event[j], nue, nuebar, numu, numubar);  // Sig
-			else if (event[j].type == "sel")  AddWeights(N_sel,  Universes, i, event[j], nue, nuebar, numu, numubar);  // Sel
-			else if (event[j].type == "bkg")  AddWeights(N_bkg,  Universes, i, event[j], nue, nuebar, numu, numubar);  // Bkg
-			else if (event[j].type == "dirt") AddWeights(N_dirt, Universes, i, event[j], nue, nuebar, numu, numubar);  // Dirt
+			if      (event[j].type == "gen")  AddWeights(N_gen,  Universes, temp_index, event[j], nue, nuebar, numu, numubar, param);  // Gen
+			else if (event[j].type == "sig")  AddWeights(N_sig,  Universes, temp_index, event[j], nue, nuebar, numu, numubar, param);  // Sig
+			else if (event[j].type == "sel")  AddWeights(N_sel,  Universes, temp_index, event[j], nue, nuebar, numu, numubar, param);  // Sel
+			else if (event[j].type == "bkg")  AddWeights(N_bkg,  Universes, temp_index, event[j], nue, nuebar, numu, numubar, param);  // Bkg
+			else if (event[j].type == "dirt") AddWeights(N_dirt, Universes, temp_index, event[j], nue, nuebar, numu, numubar, param);  // Dirt
 			else std::cout << "unknown type :("<< std::endl;
 		
 		} // END of event loop
-		
 
 		// ++++++++++++++++++++ Now calculate the new cross section in parameter iniverse i +++++++++++++++++++++++++++++
 
@@ -272,7 +299,7 @@ void FluxSystematics(){
 			// }
 			// else flux = IntegrateFlux(k, fCV, i, POTScale); 
 
-			flux = IntegrateFlux(k, fCV, i, POTScale);
+			flux = IntegrateFlux(k, fCV, temp_index, POTScale, params.at(i));
 
 			Flux[k] = flux; // save the flux
 			std::cout << "\nflux: " << flux << std::endl;
@@ -310,6 +337,7 @@ void FluxSystematics(){
 			if (DEBUG) std::cout << "\033[1;33mNew DATA X-section [10^-39 cm^2]\t\t" << Data_x_sec[k]/1.0e-39 << "\033[0m"<<std::endl;
 			if (DEBUG) std::cout << "\n++++++++++++++++++++++++++\n" << std::endl;
 			
+		
 		}
 
 		// Add the x section and efficiencies to a vector
@@ -323,6 +351,11 @@ void FluxSystematics(){
 
 		// Clear and do it again for next paramter
 		N_gen.clear(); N_sig.clear(); N_bkg.clear(); N_sel.clear(); Data_x_sec.clear(), N_dirt.clear(); Efficiency.clear(); Flux.clear();
+
+		if (params.at(i).find("PPFX") != std::string::npos ) HP_index++; // Now weighted, increment the index
+		else {
+			if (params.at(i) != "CV") Beamline_index++; // Increment the Beamline variation counter
+		}
 	
 	} // END loop over all paramters
 
@@ -330,38 +363,38 @@ void FluxSystematics(){
 	// Now we want to calucalte the uncertainties
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	
-	// First get the standard deviation of the efficiency and the Data cross section from the HP
-	if (UseHP){
-		double HP_XSEC_STD    = STD_Calculator(vec_Data_x_sec[1], vec_Data_x_sec[0][0]); // vec<double>, double
-		double Eff_STD        = STD_Calculator(vec_Efficiency[1], vec_Efficiency[0][0]); 
-		double HP_Gen_STD     = STD_Calculator(vec_gen[1],        vec_gen[0][0]);
-		double HP_Sig_STD     = STD_Calculator(vec_sig[1],        vec_sig[0][0]);
-		double HP_Dirt_STD    = STD_Calculator(vec_dirt[1],       vec_dirt[0][0]);
-		double HP_Bkg_STD     = STD_Calculator(vec_bkg[1],        vec_bkg[0][0]);
-		double HP_Flux_STD    = STD_Calculator(vec_flux[1],       vec_flux[0][0]);
+	// First get the standard deviation of the efficiency and the Data cross section from the HP 
+	std::cout << "\033[0;31mHadron Production Errors Summary\033[0m\n" << std::endl;	
+	for (unsigned int j=1; j < resize_num+1; j++){
 
-		std::cout << "HP_XSEC_STD:\t" <<  HP_XSEC_STD << "\tHP XSEC Err:\t"    << (100 * HP_XSEC_STD) / vec_Data_x_sec[0][0] << " \%"<<std::endl;
-		std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-		std::cout << "Eff_STD:\t"     <<  Eff_STD     << "\tEfficiency Err:\t" << (100 * Eff_STD) / vec_Efficiency[0][0]     << " \%" << std::endl;
-		std::cout << "HP_Gen_STD:\t"  <<  HP_Gen_STD  << "\t\tHP Gen Err:\t"   << (100 * HP_Gen_STD) / vec_gen[0][0]         << " \%"<<std::endl;
-		std::cout << "HP_Sig_STD:\t"  <<  HP_Sig_STD  << "\t\tHP Sig Err:\t"   << (100 * HP_Sig_STD) / vec_sig[0][0]         << " \%"<<std::endl;
-		std::cout << "HP_Dirt_STD:\t" <<  HP_Dirt_STD << "\t\tHP Dirt Err:\t"  << (100 * HP_Dirt_STD) / vec_dirt[0][0]       << " \%"<<std::endl;
-		std::cout << "HP_Bkg_STD:\t"  <<  HP_Bkg_STD  << "\t\tHP Bkg Err:\t"   << (100 * HP_Bkg_STD) / vec_bkg[0][0]         << " \%"<<std::endl;
-		std::cout << "HP_Flux_STD:\t" <<  HP_Flux_STD << "\tHP Flux Err:\t"    << (100 * HP_Flux_STD) / vec_flux[0][0]       << " \%"<<std::endl;
+		double XSEC_STD = STD_Calculator(vec_Data_x_sec[j], vec_Data_x_sec[0][0]); // vec<double>, double
+		double Eff_STD  = STD_Calculator(vec_Efficiency[j], vec_Efficiency[0][0]); 
+		double Gen_STD  = STD_Calculator(vec_gen[j],        vec_gen[0][0]);
+		double Sig_STD  = STD_Calculator(vec_sig[j],        vec_sig[0][0]);
+		double Dirt_STD = STD_Calculator(vec_dirt[j],       vec_dirt[0][0]);
+		double Bkg_STD  = STD_Calculator(vec_bkg[j],        vec_bkg[0][0]);
+		double Flux_STD = STD_Calculator(vec_flux[j],       vec_flux[0][0]);
+		std::cout << "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+		std::cout << "\033[1;32m" <<  params.at(j) << "\033[0m" << std::endl;
+		std::cout << "XSEC_STD:\t" <<  XSEC_STD << "\t \033[1;33mXSEC Err:\t"    << (100 * XSEC_STD) / vec_Data_x_sec[0][0] << " \%\033[0m"<<std::endl;
+		std::cout << "Eff_STD:\t"  <<  Eff_STD  << "\tEfficiency Err:\t" << (100 * Eff_STD) /  vec_Efficiency[0][0] << " \%"<<std::endl;
+		std::cout << "Gen_STD:\t"  <<  Gen_STD  << "\t\tGen Err:\t"   << (100 * Gen_STD) /  vec_gen[0][0]        << " \%"<<std::endl;
+		std::cout << "Sig_STD:\t"  <<  Sig_STD  << "\t\tSig Err:\t"   << (100 * Sig_STD) /  vec_sig[0][0]        << " \%"<<std::endl;
+		std::cout << "Dirt_STD:\t" <<  Dirt_STD << "\t\tDirt Err:\t"  << (100 * Dirt_STD) / vec_dirt[0][0]       << " \%"<<std::endl;
+		std::cout << "Bkg_STD:\t"  <<  Bkg_STD  << "\t\tBkg Err:\t"   << (100 * Bkg_STD) /  vec_bkg[0][0]        << " \%"<<std::endl;
+		std::cout << "Flux_STD:\t" <<  Flux_STD << "\tFlux Err:\t"    << (100 * Flux_STD) / vec_flux[0][0]       << " \%"<<std::endl;
 	}
-
+	
 	// Now lets get the percent difference between the nominal beamline and the beamline variations
-	// nominal is given by index 9
 	std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-	std::cout << "Beamline Errors\n" << std::endl;
-	for (unsigned int i=2; i < params.size(); i++){
-		std::cout << params[i] << "\n" <<
-			"Data X-Sec:\t\t\t\033[1;33m" <<  vec_Data_x_sec[i][0] <<
-			"\033[0m\nPercent diff from Nominal:\t" <<  100 * (vec_Data_x_sec[i][0] - vec_Data_x_sec[0][0]) /  vec_Data_x_sec[0][0] << " \%"
+	std::cout << "\033[0;31mBeamline Errors Summary\033[0m\n" << std::endl;
+	for (unsigned int i=resize_num+1; i < params.size(); i++){
+		std::cout << "\033[1;32m" << params[i] << "\033[0m\n" <<
+			"Data X-Sec:\t\t\t" <<  vec_Data_x_sec[i][0] <<
+			"\nPercent diff from Nominal:\t\033[1;33m" <<  100 * (vec_Data_x_sec[i][0] - vec_Data_x_sec[0][0]) /  vec_Data_x_sec[0][0] << " \%\033[0m"
 			<< "\n------------------------------------------------" 
 			<< "\n"<< std::endl;
 	}
-
 
 	// // Make a plot of the beamline variation uncertainties
 	std::vector<std::string> param_max = {

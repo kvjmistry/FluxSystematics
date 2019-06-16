@@ -13,7 +13,7 @@ class event {
 class HistWeights {
 	public:
 		HistWeights(std::string flav_) {flav = flav_;} // constructor to set type
-		std::vector<TH2D*> HP; // Vector of histograms for each universe/cv
+		std::vector<std::vector<TH2D*>> HP; // Vector of histograms for each universe/cv
 		std::vector<TH2D*> Beamline; // As above but for the beamline variations
 		std::string flav; // nuetrino type, nue, nuebar, numu, numubar
 }; 
@@ -53,48 +53,125 @@ double IntegrateHist(TH2D* h){
 }
 // ------------------------------------------------------------------------------------------------------------
 // Function to take the ratio of universe i with nominal and return a weight for an E, theta
-double GetWeight(int universe, int index, event event, HistWeights nue,  HistWeights nuebar,  HistWeights numu,  HistWeights numubar){
+double GetWeight(int universe, int index, event event, HistWeights &nue,  HistWeights &nuebar,  HistWeights &numu,  HistWeights &numubar, std::string param){
 	
 	double weight, xbin, ybin;
-	TH2D *hRatio;
 
 	// Get the neutrino flavour to reweigh the event type
 	std::string mode = GetMode(event.nu_flav); 
 
+	// // if index is 0 then we are getting a weight from a HP universe
+	// if (param.find("PPFX") != std::string::npos){
+	// 	if (mode == "nue") hRatio = (TH2D*) 			nue.HP.at(index).at(universe)->Clone("hRatio");
+	// 	else if (mode == "nuebar") hRatio = (TH2D*) 	nuebar.HP.at(index).at(universe)->Clone("hRatio");
+	// 	else if (mode == "numu") hRatio = (TH2D*) 		numu.HP.at(index).at(universe)->Clone("hRatio");
+	// 	else if (mode == "numubar") hRatio = (TH2D*) 	numubar.HP.at(index).at(universe)->Clone("hRatio");
+	// 	else std::cout << "Unknown mode!"<< std::endl;
+	
+	// }
+	// else {
+		
+	// 	// CV 
+	// 	if (param == "CV") return weight = 1;
+		
+	// 	// else we have a beamline variations
+	// 	else {
+	// 		if (mode == "nue") hRatio = (TH2D*) 			nue.Beamline.at(index-1)->Clone("hRatio");
+	// 		else if (mode == "nuebar") hRatio = (TH2D*) 	nuebar.Beamline.at(index-1)->Clone("hRatio");
+	// 		else if (mode == "numu") hRatio = (TH2D*) 		numu.Beamline.at(index-1)->Clone("hRatio");
+	// 		else if (mode == "numubar") hRatio = (TH2D*) 	numubar.Beamline.at(index-1)->Clone("hRatio");
+	// 		else std::cout << "Unknown mode!"<< std::endl;
+	// 	}
+		
+	// }
+
+	// // Now pick the value at Enu and Theta
+	// xbin = hRatio->GetXaxis()->FindBin(event.E);
+	// ybin = hRatio->GetYaxis()->FindBin(event.Theta);
+	// weight = hRatio->GetBinContent(xbin, ybin);
+
+
 	// if index is 0 then we are getting a weight from a HP universe
-	if (index == 1){
-		if (mode == "nue") hRatio = (TH2D*) 			nue.HP[universe]->Clone("hRatio");
-		else if (mode == "nuebar") hRatio = (TH2D*) 	nuebar.HP[universe]->Clone("hRatio");
-		else if (mode == "numu") hRatio = (TH2D*) 		numu.HP[universe]->Clone("hRatio");
-		else if (mode == "numubar") hRatio = (TH2D*) 	numubar.HP[universe]->Clone("hRatio");
+	if (param.find("PPFX") != std::string::npos){
+		if (mode == "nue"){
+			xbin = nue.HP.at(index).at(universe)->GetXaxis()->FindBin(event.E);
+			ybin = nue.HP.at(index).at(universe)->GetYaxis()->FindBin(event.Theta);
+			weight = nue.HP.at(index).at(universe)->GetBinContent(xbin, ybin);
+		}
+		else if (mode == "nuebar"){
+			xbin = nuebar.HP.at(index).at(universe)->GetXaxis()->FindBin(event.E);
+			ybin = nuebar.HP.at(index).at(universe)->GetYaxis()->FindBin(event.Theta);
+			weight = nuebar.HP.at(index).at(universe)->GetBinContent(xbin, ybin);
+		}
+		else if (mode == "numu"){
+			xbin = numu.HP.at(index).at(universe)->GetXaxis()->FindBin(event.E);
+			ybin = numu.HP.at(index).at(universe)->GetYaxis()->FindBin(event.Theta);
+			weight = numu.HP.at(index).at(universe)->GetBinContent(xbin, ybin);
+		}
+		else if (mode == "numubar"){
+			xbin = numubar.HP.at(index).at(universe)->GetXaxis()->FindBin(event.E);
+			ybin = numubar.HP.at(index).at(universe)->GetYaxis()->FindBin(event.Theta);
+			weight = numubar.HP.at(index).at(universe)->GetBinContent(xbin, ybin);
+		}
 		else std::cout << "Unknown mode!"<< std::endl;
 	
 	}
-	// else we have a beamline variations indexes from 1 to N
-	else if (index > 1) {
-		if (mode == "nue") hRatio = (TH2D*) 			nue.Beamline[index-2]->Clone("hRatio");
-		else if (mode == "nuebar") hRatio = (TH2D*) 	nuebar.Beamline[index-2]->Clone("hRatio");
-		else if (mode == "numu") hRatio = (TH2D*) 		numu.Beamline[index-2]->Clone("hRatio");
-		else if (mode == "numubar") hRatio = (TH2D*) 	numubar.Beamline[index-2]->Clone("hRatio");
-		else std::cout << "Unknown mode!"<< std::endl;
+	else {
 		
+		// CV 
+		if (param == "CV") return weight = 1;
+		
+		// else we have a beamline variations
+		else {
+			if (mode == "nue"){
+				xbin =   nue.Beamline.at(index-1)->GetXaxis()->FindBin(event.E);
+				ybin =   nue.Beamline.at(index-1)->GetYaxis()->FindBin(event.Theta);
+				weight = nue.Beamline.at(index-1)->GetBinContent(xbin, ybin);
+			}
+			else if (mode == "nuebar"){
+				xbin =   nuebar.Beamline.at(index-1)->GetXaxis()->FindBin(event.E);
+				ybin =   nuebar.Beamline.at(index-1)->GetYaxis()->FindBin(event.Theta);
+				weight = nuebar.Beamline.at(index-1)->GetBinContent(xbin, ybin);
+			}
+			else if (mode == "numu"){
+				xbin =   numu.Beamline.at(index-1)->GetXaxis()->FindBin(event.E);
+				ybin =   numu.Beamline.at(index-1)->GetYaxis()->FindBin(event.Theta);
+				weight = numu.Beamline.at(index-1)->GetBinContent(xbin, ybin);
+			}
+			else if (mode == "numubar"){
+				xbin =   numubar.Beamline.at(index-1)->GetXaxis()->FindBin(event.E);
+				ybin =   numubar.Beamline.at(index-1)->GetYaxis()->FindBin(event.Theta);
+				weight = numubar.Beamline.at(index-1)->GetBinContent(xbin, ybin);
+			}
+			else std::cout << "Unknown mode!"<< std::endl;
+		}
 	}
-	else return weight = 1; // CV 
-
-	// Now pick the value at Enu and Theta
-	xbin = hRatio->GetXaxis()->FindBin(event.E);
-	ybin = hRatio->GetYaxis()->FindBin(event.Theta);
-	weight = hRatio->GetBinContent(xbin, ybin);
-
-	delete hRatio; // Essential for speed, clears memory!
 
 	// std::cout << weight << std::endl; // DANGEROUS!!
 
 	return weight;
 }
 // ------------------------------------------------------------------------------------------------------------
+// Function to add the weights for each universe -- will want to overload this with another function to handle unisims
+void AddWeights(std::vector<double> &N, int Universes , int index, event event, HistWeights &nue,  HistWeights &nuebar,  HistWeights &numu,  HistWeights &numubar, std::string param){
+	double weight{0};
+
+	// Initialise the size of the counter if it is the first event loop. 
+	if (N.size() == 0 )  N.resize( Universes );  // Resize to number of Universes.
+
+	// Loop over each universe
+	for (unsigned int i = 0; i < Universes; i++){ 
+
+		// Get the weight
+		weight = GetWeight(i ,index, event, nue, nuebar, numu, numubar, param);
+
+		N.at(i) += weight; // Add weight to vector of counters.
+
+	} 
+}
+// ------------------------------------------------------------------------------------------------------------
 // Function to calculate the interated flux
-double IntegrateFlux(int universe, TFile* fCV, int index, double POTScale){
+double IntegrateFlux(int universe, TFile* fCV, int index, double POTScale, std::string param){
 
 	double flux{0};
 	TH2D *hBeamline2d, *hBeamline2dnue, *hBeamline2dnuebar, *hHP2d, *hHP2dnue ,*hHP2dnuebar, *hCV2dnue, *hCV2dnuebar, *hCV2d;
@@ -103,10 +180,10 @@ double IntegrateFlux(int universe, TFile* fCV, int index, double POTScale){
 
 	// if index is 0 then we are running over HP
 	// get histogram from fCV for Masterweight PPFX universe i and divide out  by the cv
-	if (index == 1){
+	if (param.find("PPFX") != std::string::npos) {
 
-		boolhist = GetHist(fCV, hHP2dnue, Form("nue/Multisims/nue_PPFXMaster_Uni_%i_AV_TPC_2D", universe)); if (boolhist == false) gSystem->Exit(0);
-		boolhist = GetHist(fCV, hHP2dnuebar, Form("nuebar/Multisims/nuebar_PPFXMaster_Uni_%i_AV_TPC_2D", universe)); if (boolhist == false) gSystem->Exit(0);
+		boolhist = GetHist(fCV, hHP2dnue, Form("nue/Multisims/nue_%s_Uni_%i_AV_TPC_2D", param.c_str(), universe)); if (boolhist == false) gSystem->Exit(0);
+		boolhist = GetHist(fCV, hHP2dnuebar, Form("nuebar/Multisims/nuebar_%s_Uni_%i_AV_TPC_2D", param.c_str(), universe)); if (boolhist == false) gSystem->Exit(0);
 		
 		hHP2d = (TH2D*) hHP2dnue->Clone("hHP2d");
 		hHP2d->Add(hHP2dnuebar); // Combine the fluxes
@@ -119,36 +196,41 @@ double IntegrateFlux(int universe, TFile* fCV, int index, double POTScale){
 
 	}
 	// else we have a beamline variations indexes from 2 to N
-	else if (index > 1){
+	else {
 
-		boolfile  = GetFile(fBeamline , Form( "/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run%i.root", index-1)); if (boolfile == false) gSystem->Exit(0);
+		// CV
+		if (param == "CV"){
+			boolhist = GetHist(fCV, hCV2dnue, "nue/Detsmear/nue_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
+			boolhist = GetHist(fCV, hCV2dnuebar, "nuebar/Detsmear/nuebar_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
 
-		// Get the CV histogram in 2D
-		boolhist = GetHist(fBeamline, hBeamline2dnue, "nue/Detsmear/nue_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
-		boolhist = GetHist(fBeamline, hBeamline2dnuebar, "nuebar/Detsmear/nuebar_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
+			hCV2d = (TH2D*) hCV2dnue->Clone("hCV2d");
+			hCV2d->Add(hCV2dnuebar); // Combine the fluxes
+
+			double xbin_th = hCV2d->GetXaxis()->FindBin( 0.75*0.2065); // find the x bin to integrate from (threshold)
 		
-		hBeamline2d = (TH2D*) hBeamline2dnue->Clone("hBeamline2d");
-		hBeamline2d->Add(hBeamline2dnuebar); // Combine the fluxes
+			flux  = hCV2d->Integral(xbin_th, hCV2d->GetNbinsX()+1, 0, hCV2d->GetNbinsY()+1); // Integrate over whole phase space (not quite any more)
 
-		double xbin_th = hBeamline2d->GetXaxis()->FindBin( 0.75*0.2065); // find the x bin to integrate from (threshold)
+			flux*= (POTScale / (GetPOT(fCV)*1.0e4)); // Scale to cm2 and the DATA POT
 
-		flux  = hBeamline2d->Integral(xbin_th, hBeamline2d->GetNbinsX()+1, 0, hBeamline2d->GetNbinsY()+1); // Integrate over whole phase space
-		
-		flux*= (POTScale / (GetPOT(fBeamline)*1.0e4)); // Scale to cm2 and the DATA POT
 
-	}
-	else { // CV where index = 0
-		boolhist = GetHist(fCV, hCV2dnue, "nue/Detsmear/nue_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
-		boolhist = GetHist(fCV, hCV2dnuebar, "nuebar/Detsmear/nuebar_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
+		}
+		else {
 
-		hCV2d = (TH2D*) hCV2dnue->Clone("hCV2d");
-		hCV2d->Add(hCV2dnuebar); // Combine the fluxes
+			boolfile  = GetFile(fBeamline , Form( "/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run%i.root", index)); if (boolfile == false) gSystem->Exit(0);
 
-		double xbin_th = hCV2d->GetXaxis()->FindBin( 0.75*0.2065); // find the x bin to integrate from (threshold)
-		
-		flux  = hCV2d->Integral(xbin_th, hCV2d->GetNbinsX()+1, 0, hCV2d->GetNbinsY()+1); // Integrate over whole phase space (not quite any more)
+			// Get the CV histogram in 2D
+			boolhist = GetHist(fBeamline, hBeamline2dnue, "nue/Detsmear/nue_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
+			boolhist = GetHist(fBeamline, hBeamline2dnuebar, "nuebar/Detsmear/nuebar_CV_AV_TPC_2D"); if (boolhist == false) gSystem->Exit(0);
+			
+			hBeamline2d = (TH2D*) hBeamline2dnue->Clone("hBeamline2d");
+			hBeamline2d->Add(hBeamline2dnuebar); // Combine the fluxes
 
-		flux*= (POTScale / (GetPOT(fCV)*1.0e4)); // Scale to cm2 and the DATA POT
+			double xbin_th = hBeamline2d->GetXaxis()->FindBin( 0.75*0.2065); // find the x bin to integrate from (threshold)
+
+			flux  = hBeamline2d->Integral(xbin_th, hBeamline2d->GetNbinsX()+1, 0, hBeamline2d->GetNbinsY()+1); // Integrate over whole phase space
+			
+			flux*= (POTScale / (GetPOT(fBeamline)*1.0e4)); // Scale to cm2 and the DATA POT
+		}
 
 	}
 
@@ -178,24 +260,6 @@ double CalcDataXSec(double sel, double bkg , double flux,
 
 	// return (sel - 129.974) / (efficiency * targets * flux); 
 	return (sel - (intime_cosmics_bkg * intime_cosmic_scale_factor) - (dirt * dirt_scale_factor) - (bkg * mc_scale_factor)) / (efficiency * targets * flux); 
-}
-// ------------------------------------------------------------------------------------------------------------
-// Function to add the weights for each universe -- will want to overload this with another function to handle unisims
-void AddWeights(std::vector<double> &N, int Universes , int index, event event, HistWeights nue,  HistWeights nuebar,  HistWeights numu,  HistWeights numubar){
-	double weight{0};
-
-	// Initialise the size of the counter if it is the first event loop. 
-	if (N.size() == 0 )  N.resize( Universes );  // Resize to number of Universes.
-
-	// Loop over each universe
-	for (unsigned int i = 0; i < Universes; i++){ 
-
-		// Get the weight
-		weight = GetWeight(i ,index, event, nue, nuebar, numu, numubar);
-
-		N.at(i) += weight; // Add weight to vector of counters.
-
-	} 
 }
 // ------------------------------------------------------------------------------------------------------------
 // Function to read in the event lists
@@ -304,34 +368,40 @@ void PrecalcHistRatio(HistWeights &flav, const char* mode, std::vector<std::stri
 	TH2D *hBeamline2d , *hHP2d, *hCV2d, *hCV2d_Beam;
 	TFile *fBeamline, *fCV, *fCV_Beam;
 	bool boolhist, boolfile;
+	int b=1, h=0;
 
 	std::cout << "Calculating Hist ratios for flavour:\t" << mode << std::endl;
 
-	// --- ---- ----- HP ---- --- --- ----- //
-	// File with HP
-	// boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/with_tilt_2Dhists/output.root"); if (boolfile == false) gSystem->Exit(0); // with tilt
-	// boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/bugfix_release_notilt/output.root"); if (boolfile == false) gSystem->Exit(0); // notilt
-	// boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/DetectorWeights_withtilt/2D/more_stats_pi_to_nue/output.root"); if (boolfile == false) gSystem->Exit(0); // Updated flux with tilt 
+	// File with CV
 	boolfile  = GetFile(fCV , "/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run0.root"); if (boolfile == false) gSystem->Exit(0); // Most up to date version of CV
-
 	boolhist = GetHist(fCV, hCV2d, Form("%s/Detsmear/%s_CV_AV_TPC_2D", mode, mode)); if (boolhist == false) gSystem->Exit(0); // Get the CV
 
-	for (unsigned int i=0; i<100; i++){
-		boolhist = GetHist(fCV, hHP2d, Form("%s/Multisims/%s_PPFXMaster_Uni_%i_AV_TPC_2D",mode, mode, i)); if (boolhist == false) gSystem->Exit(0);
-		hHP2d->Divide(hCV2d); // Divide hists
-		// DivideHists(hCV2d, hHP2d, hRatio);
-		flav.HP.push_back(hHP2d); // push back to vector
+	// Loop over the parameters
+	for (unsigned int i=1; i < params.size(); i++){
+		// std::cout << params.at(i) << std::endl;
+
+		// --- ---- ----- HP ---- --- --- ----- //
+		if (params.at(i).find("PPFX") != std::string::npos) {
+			// std::cout << params.at(i) << std::endl;
+			
+			for (unsigned int k=0; k<100; k++){
+				boolhist = GetHist(fCV, hHP2d, Form("%s/Multisims/%s_%s_Uni_%i_AV_TPC_2D",mode, mode , params.at(i).c_str() , k)); if (boolhist == false) gSystem->Exit(0);
+				hHP2d->Divide(hCV2d); // Divide hists
+				flav.HP.at(h).push_back(hHP2d); // push back to vector
+			}
+			h++;
+		}
+		// --- ---- ----- Beamline ---- --- --- ----- //
+		else {
+			// std::cout << params.at(i) << std::endl;
+			boolfile  = GetFile(fBeamline , Form("/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run%i.root", b)); if (boolfile == false) gSystem->Exit(0);
+			boolhist  = GetHist(fBeamline, hBeamline2d, Form("%s/Detsmear/%s_CV_AV_TPC_2D",mode, mode)); if (boolhist == false) gSystem->Exit(0);
+			hBeamline2d->Divide(hCV2d); // Divide hists
+			flav.Beamline.push_back(hBeamline2d); // push back to vector
+			b++;
+		}
 	}
-	
-	// --- ---- ----- Beamline ---- --- --- ----- //	
-	for (unsigned int i=1; i < params.size()-1; i++){
-		boolfile  = GetFile(fBeamline , Form("/uboone/data/users/kmistry/work/PPFX/uboone/beamline_zero_threshold/output_uboone_run%i.root", i)); if (boolfile == false) gSystem->Exit(0);
-		boolhist = GetHist(fBeamline, hBeamline2d, Form("%s/Detsmear/%s_CV_AV_TPC_2D",mode, mode)); if (boolhist == false) gSystem->Exit(0);
-		hBeamline2d->Divide(hCV2d); // Divide hists
-		// DivideHists(hCV2d, hHP2d, hRatio);
-		flav.Beamline.push_back(hBeamline2d); // push back to vector
-	}
-	
+
 }
 // ------------------------------------------------------------------------------------------------------------
 // Function to caluclate the standard deviation 
